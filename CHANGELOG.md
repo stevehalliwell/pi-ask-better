@@ -9,4 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial project documentation and work-record structure.
+- Interactive terminal-only `ask_user` extension with free-text, option filtering, multi-select, and responsive previews.
+- Installation, usage, and result-contract documentation.
+- A reusable non-interactive package smoke check.
+
+### Changed
+
+- `ask_user` is hidden outside Pi's interactive terminal mode.

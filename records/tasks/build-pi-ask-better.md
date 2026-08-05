@@ -4,7 +4,7 @@ name: build-pi-ask-better
 created_at: 2026-08-05T21:15:46.037Z
 desc: "A low-friction interactive Pi terminal ask_user tool that keeps the transcript visible."
 tags: []
-status: todo
+status: done
 scope: agreed
 ---
 
@@ -57,6 +57,7 @@ scope: agreed
 - 2026-08-05: Down moves from the initially focused text box into filtered options; Up from the first option returns to the text box.
 - 2026-08-05: Starting a non-empty free-text draft clears checked multi-select options.
 - 2026-08-05: Keep the TUI compact for small terminals; do not sacrifice the transcript or core answer flow for decorative framing.
+- 2026-08-05: Return pi-ask-complete-style JSON text: `{ cancelled, answers: [{ tab, answer|custom|answers }] }`; retain matching structured tool details.
 
 ## Plan
 
@@ -69,17 +70,27 @@ scope: agreed
 
 ## Implemented so far
 
-- Requirements research only; no extension code.
+- Added package metadata and root `index.ts` Pi extension registering terminal-only `ask_user` with sequential execution.
+- Added normalization for common question and option aliases, including string options; no options provides a free-text-only panel.
+- Implemented a bottom editor-panel UI with initially focused live-filter input, immediate option/custom submission, multi-select toggles, responsive preview placement, IME focus propagation, and width/control-character-safe rendering.
+- Reconciled the active tool set on session start so `ask_user` is hidden outside terminal TUI mode.
+- Added a human-first README focused on the in-terminal question experience and controls; contributor checks remain concise.
+- Added CHANGELOG entry and reusable `npm run smoke` package-load check.
 
 ## Checks
 
 - Attendant task collection validates with no diagnostics.
 - Pi 0.83.0 API review: `ctx.ui.custom()` with `overlay: false` provides the required editor-panel surface while leaving the transcript above it visible; `Editor`, `Focusable`, `fuzzyFilter`, width-safe TUI helpers, `executionMode: "sequential"`, `prepareArguments()`, and per-turn `pi.setActiveTools()` reconciliation are available. No API blocker found.
+- Initial `pi --no-extensions -e ./index.ts --no-session -p ...` checks loaded the extension and exercised normalized `options` and `choices` inputs before the terminal-only activation guard was added.
+- User manually confirmed the interactive extension is working.
+- `npm run smoke`, `npm pack --dry-run`, and `git diff --check` pass.
+- README revision passes `git diff --check`.
 
 ## Review / next slice
 
-- Ready for review: no; scope is agreed but implementation has not started.
-- Likely next slice/task: build the terminal-only vertical slice.
+- Ready for review: yes; implementation, package boundary, documentation, and smoke validation are complete.
+- Ready for review: README is now human-first, describing the experience and controls rather than agent-facing tool usage.
+- User approved the completed implementation on 2026-08-05.
 
 ## Notes
 

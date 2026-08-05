@@ -2,7 +2,7 @@
 
 Project-specific agent notes only. Global Pi rules already apply.
 
-Before committing: replace or delete every `[TBD]` item. Keep only verified, durable facts. Pi concatenates context files; refine global rules without contradicting them. State any narrow exception, condition, and reason.
+Before committing: keep only verified, durable facts. Pi concatenates context files; refine global rules without contradicting them. State any narrow exception, condition, and reason.
 
 ## Read first
 
@@ -13,34 +13,33 @@ Before committing: replace or delete every `[TBD]` item. Keep only verified, dur
 
 ## Verified commands
 
-- Setup/install: [TBD]
-- Test: [TBD]
-- Focused test: [TBD]
-- Lint/typecheck/build: [TBD]
-- Required order, prerequisites, expensive checks, bench/profile policy: [TBD]
-- Local wrappers/skills: [TBD]
+- Setup/install: Node.js 22.19+ and Pi 0.83.0+; Pi provides the extension's peer dependencies at runtime.
+- Test: `npm run smoke` (requires a configured Pi model).
+- Focused test: `PI_SKIP_VERSION_CHECK=1 pi --no-extensions -e ./index.ts --no-session -p "Reply with exactly: ok"`.
+- Lint/typecheck/build: none configured; Pi loads TypeScript extensions through jiti.
+- Packaging check: `npm pack --dry-run`.
+- Required order: run smoke, packaging, and `git diff --check` before release or commit when applicable.
 
 ## Project map and coding rules
 
-- Key source/test/config/generated paths: [TBD]
-- Naming: [TBD]
-- Formatting: [TBD]
-- Error handling: [TBD]
-- Ownership/lifetime/resources: [TBD]
-- Public API compatibility: [TBD]
-- Perf-sensitive areas: [TBD]
-- Security/data constraints: Extensions run with the user's full system permissions; do not collect, log, or transmit question answers without explicit design approval.
+- Extension entry point: `index.ts`.
+- Reusable checks: `scripts/`.
+- Public package metadata: `package.json`; public documentation: `README.md`; release notes: `CHANGELOG.md`.
+- Naming/formatting: TypeScript uses two-space indentation, double quotes, and semicolons.
+- Error handling: extension tool failures must return useful tool results or throw genuine execution errors; terminal-only interactions must remain unavailable outside TUI mode.
+- Public API compatibility: preserve the documented `ask_user` result contract unless a task explicitly changes it.
+- Security/data constraints: extensions run with the user's full system permissions; do not collect, log, or transmit question answers without explicit design approval.
 
 ## Protected paths
 
 Do not edit unless task explicitly targets them or rule below says otherwise:
 
 - Generated/build/cache: `.attendant/`
-- Vendored/deps: [TBD]
-- CI/release config: [TBD]
-- Binary/media/serialized assets: [TBD]
-- Lockfiles policy: [TBD]
-- Backups/archives: [TBD]
+- Installed dependencies: `node_modules/`
+- CI/release config: none exists.
+- Binary/media/serialized assets: none exists.
+- Lockfiles: do not add one unless runtime dependencies are introduced and the user approves the install.
+- Backups/archives: none exists.
 
 ## Project-specific doc policy
 
@@ -51,7 +50,6 @@ Do not edit unless task explicitly targets them or rule below says otherwise:
 
 ## Done means here
 
-- Project-specific acceptance: [TBD]
-- Required validation commands and expected result: [TBD]
-- Test/doc/update requirements for changed behavior: [TBD]
-- If a required check cannot run, record blocker and remaining risk.
+- `ask_user` remains an interactive-terminal-only Pi extension with documented controls and result behavior.
+- Run `npm run smoke`, `npm pack --dry-run`, and `git diff --check`; record any check that cannot run and its risk.
+- Update README and CHANGELOG for user-facing behavior changes.

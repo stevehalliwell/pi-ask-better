@@ -16,3 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `ask_user` is hidden outside Pi's interactive terminal mode.
+- Text entry, paste, and editor shortcuts continue to work while an option has focus.
+- The question panel now has labelled sections, clearer focus markers, and compact bordered hierarchy.
+- In single-select questions, Enter selects a sole filtered option while text input remains active.

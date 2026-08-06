@@ -19,6 +19,12 @@ interface Option {
   preview?: string;
 }
 
+interface PanelTheme extends EditorTheme {
+  accent: (text: string) => string;
+  bold: (text: string) => string;
+  muted: (text: string) => string;
+}
+
 interface AskUserParams {
   question?: string;
   header?: string;
@@ -135,7 +141,7 @@ class AskUserPanel implements Component, Focusable {
     private readonly params: Required<Pick<AskUserParams, "question" | "tab" | "multiSelect">> & Pick<AskUserParams, "header"> & { options: Option[] },
     private readonly onDone: (payload: AskUserPayload) => void,
     private readonly tui: ConstructorParameters<typeof Editor>[0],
-    theme: ConstructorParameters<typeof Editor>[1],
+    private readonly theme: PanelTheme,
   ) {
     const editorTheme: EditorTheme = {
       borderColor: (text) => theme.borderColor(text),
@@ -187,6 +193,10 @@ class AskUserPanel implements Component, Focusable {
         this.onDone({ cancelled: true, answers: [] });
         return;
       }
+      if (!this.params.multiSelect && options.length === 1 && matchesKey(data, Key.enter)) {
+        this.finishOption(options[0]);
+        return;
+      }
       this.editor.handleInput(data);
       return;
     }
@@ -211,35 +221,41 @@ class AskUserPanel implements Component, Focusable {
       return;
     }
     const option = options[this.optionIndex];
-    if (!option) return;
-    if (this.params.multiSelect && matchesKey(data, Key.space)) {
+    if (option && this.params.multiSelect && matchesKey(data, Key.space)) {
       if (this.selected.has(option.label)) this.selected.delete(option.label);
       else this.selected.add(option.label);
       this.refresh(this.tui);
       return;
     }
-    if (matchesKey(data, Key.enter)) this.finishOption(option);
+    if (option && matchesKey(data, Key.enter)) {
+      this.finishOption(option);
+      return;
+    }
+    this.editor.handleInput(data);
   }
 
   render(width: number): string[] {
     if (this.cachedWidth === width && this.cachedLines) return this.cachedLines;
     const renderWidth = Math.max(1, width);
+    const contentWidth = renderWidth >= 5 ? renderWidth - 4 : renderWidth;
     const options = this.visibleOptions();
     const lines: string[] = [];
-    const add = (text: string) => lines.push(truncateToWidth(text, renderWidth));
+    const add = (text: string) => lines.push(truncateToWidth(text, contentWidth));
 
-    if (this.params.header) wrap(lines, this.params.header, renderWidth);
-    wrap(lines, this.params.question || "What would you like to do?", renderWidth);
+    if (this.params.header) wrap(lines, this.theme.bold(this.params.header), contentWidth);
+    wrap(lines, this.theme.accent(this.theme.bold(this.params.question || "What would you like to do?")), contentWidth);
     add("");
-    for (const line of this.editor.render(renderWidth)) add(line);
+    add(this.theme.bold("Your answer"));
+    for (const line of this.editor.render(contentWidth)) add(line);
 
+    add("");
+    add(this.theme.bold("Choices"));
     if (options.length) {
-      add("");
       const preview = options[this.optionIndex]?.preview;
-      const split = !!preview && renderWidth >= 88;
+      const split = !!preview && contentWidth >= 88;
       if (split) {
-        const leftWidth = Math.floor((renderWidth - 3) / 2);
-        const rightWidth = renderWidth - leftWidth - 3;
+        const leftWidth = Math.floor((contentWidth - 3) / 2);
+        const rightWidth = contentWidth - leftWidth - 3;
         const optionLines = this.renderOptions(options, leftWidth);
         const previewLines = wrapTextWithAnsi(preview, rightWidth);
         const rowCount = Math.max(optionLines.length, previewLines.length);
@@ -249,36 +265,52 @@ class AskUserPanel implements Component, Focusable {
           add(`${left}${" ".repeat(Math.max(0, leftWidth - visibleWidth(left)))} │ ${right}`);
         }
       } else {
-        for (const line of this.renderOptions(options, renderWidth)) add(line);
+        for (const line of this.renderOptions(options, contentWidth)) add(line);
         if (preview) {
           add("");
-          wrap(lines, preview, renderWidth, "  ");
+          wrap(lines, preview, contentWidth, "  ");
         }
       }
     } else {
-      add("");
-      add("No matching options — press Enter to submit free text.");
+      add(this.theme.muted("No matching options — press Enter to submit free text."));
     }
 
     add("");
     const hint = this.params.multiSelect
-      ? "Type to filter · ↓ options · Space toggle · Enter submit · Esc cancel"
-      : "Type to answer · ↓ options · Enter submit · Esc cancel";
-    add(hint);
+      ? "Type to filter · ↓ choices · ↑ answer · Space toggle · Enter submit · Esc cancel"
+      : "Type to answer · ↓ choices · ↑ answer · Enter selects sole match · Esc cancel";
+    add(this.theme.muted(hint));
     this.cachedWidth = width;
-    this.cachedLines = lines.map((line) => truncateToWidth(line, renderWidth));
+    this.cachedLines = this.frame(lines, renderWidth, contentWidth);
     return this.cachedLines;
+  }
+
+  private frame(lines: string[], width: number, contentWidth: number): string[] {
+    if (width < 5) return lines.map((line) => truncateToWidth(line, width));
+    const border = this.theme.accent;
+    const frameLine = (line: string) => {
+      const truncated = truncateToWidth(line, contentWidth);
+      return `${border("│")} ${truncated}${" ".repeat(Math.max(0, contentWidth - visibleWidth(truncated)))} ${border("│")}`;
+    };
+    return [
+      border(`┌${"─".repeat(width - 2)}┐`),
+      frameLine(this.theme.accent(this.theme.bold("Your decision"))),
+      ...lines.map(frameLine),
+      border(`└${"─".repeat(width - 2)}┘`),
+    ];
   }
 
   private renderOptions(options: Option[], width: number): string[] {
     const lines: string[] = [];
     for (const [index, option] of options.entries()) {
-      const focused = !this.editing && index === this.optionIndex;
+      const focused = this.editing
+        ? !this.params.multiSelect && options.length === 1
+        : index === this.optionIndex;
       const selected = this.selected.has(option.label);
-      const marker = this.params.multiSelect ? (selected ? "[x]" : "[ ]") : focused ? ">" : " ";
-      const first = `${marker} ${option.label}`;
-      wrap(lines, first, width);
-      if (option.description) wrap(lines, option.description, width, "    ");
+      const marker = focused ? ">" : " ";
+      const checkbox = this.params.multiSelect ? (selected ? "[x] " : "[ ] ") : "";
+      wrap(lines, `${marker} ${checkbox}${this.theme.bold(option.label)}`, width);
+      if (option.description) wrap(lines, this.theme.muted(option.description), width, "    ");
     }
     return lines;
   }
@@ -335,6 +367,9 @@ export default function askBetter(pi: ExtensionAPI): void {
       const payload = await ctx.ui.custom<AskUserPayload>(
         (tui, theme, _keybindings, done) =>
           new AskUserPanel(panelParams, done, tui, {
+            accent: (text) => theme.fg("accent", text),
+            bold: (text) => theme.bold(text),
+            muted: (text) => theme.fg("muted", text),
             borderColor: (text) => theme.fg("accent", text),
             selectList: {
               selectedPrefix: (text) => theme.fg("accent", text),

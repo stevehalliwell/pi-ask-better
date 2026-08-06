@@ -16,13 +16,14 @@ Restart Pi or run `/reload` after installation.
 
 ## What it feels like
 
-When Pi needs your input, it shows one focused question and a list of options.
+When Pi needs your input, it shows one focused, bordered question panel with a labelled answer box and choices.
 
 - **Type right away** to filter the choices or write your own answer.
 - **Press Enter** in the text box to send what you wrote.
 - **Press Down** to move into the matching choices.
+- Keep typing, pasting, or editing your text while a choice remains focused.
 - **Press Up** from the first choice to return to the text box.
-- **Press Enter** on a choice to send it immediately.
+- **Press Enter** on a choice to send it immediately; in single-select questions, it also selects a sole filtered match.
 - For questions that allow several choices, **Space** checks or unchecks a choice, then **Enter** sends your selections.
 - **Press Escape** to cancel.
 

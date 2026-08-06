@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A compact, structured ask_user tool for Pi's interactive terminal.",
   "type": "module",
-  "files": ["index.ts"],
+  "files": ["index.ts", "skills"],
   "scripts": {
     "smoke": "node scripts/smoke-test.mjs"
   },

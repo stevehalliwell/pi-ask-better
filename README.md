@@ -6,13 +6,13 @@ You choose an option or type your own answer; Pi continues with your answer inst
 
 ## Install
 
-Install from a local checkout:
+Install from the [GitHub repository](https://github.com/stevehalliwell/pi-ask-better) as a Pi git package:
 
 ```powershell
-pi install C:\path\to\pi-ask-better
+pi install git:github.com/stevehalliwell/pi-ask-better
 ```
 
-Restart Pi or run `/reload` after installation.
+Restart Pi or run `/reload` after installation. The package includes a model-invoked `ask-user` skill that guides agents to use the panel for focused decisions and clarifications.
 
 ## What it feels like
 
@@ -28,6 +28,8 @@ When Pi needs your input, it shows one focused, bordered question panel with a l
 - **Press Escape** to cancel.
 
 Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
+
+Question text, option labels and descriptions, and previews support terminal-safe Markdown: headings, emphasis, code, lists, links, blockquotes, and pipe tables. Markdown is display-only: selecting an option returns its original label text.
 
 ## For contributors
 

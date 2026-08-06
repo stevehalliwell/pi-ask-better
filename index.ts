@@ -1,7 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   Editor,
+  Markdown,
+  type DefaultTextStyle,
   type EditorTheme,
+  type MarkdownTheme,
   fuzzyFilter,
   Key,
   matchesKey,
@@ -23,6 +26,7 @@ interface PanelTheme extends EditorTheme {
   accent: (text: string) => string;
   bold: (text: string) => string;
   muted: (text: string) => string;
+  markdown: MarkdownTheme;
 }
 
 interface AskUserParams {
@@ -117,6 +121,15 @@ function wrap(lines: string[], text: string, width: number, prefix = ""): void {
   const prefixWidth = visibleWidth(prefix);
   const usableWidth = Math.max(1, width - prefixWidth);
   for (const line of wrapTextWithAnsi(text, usableWidth)) lines.push(`${prefix}${line}`);
+}
+
+function isPipeTableDivider(line: string): boolean {
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function splitPipeTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\||\|$/g, "");
+  return trimmed.split("|").map((cell) => cell.trim());
 }
 
 class AskUserPanel implements Component, Focusable {
@@ -243,7 +256,12 @@ class AskUserPanel implements Component, Focusable {
     const add = (text: string) => lines.push(truncateToWidth(text, contentWidth));
 
     if (this.params.header) wrap(lines, this.theme.bold(this.params.header), contentWidth);
-    wrap(lines, this.theme.accent(this.theme.bold(this.params.question || "What would you like to do?")), contentWidth);
+    lines.push(
+      ...this.renderMarkdown(this.params.question || "What would you like to do?", contentWidth, {
+        color: this.theme.accent,
+        bold: true,
+      }),
+    );
     add("");
     add(this.theme.bold("Your answer"));
     for (const line of this.editor.render(contentWidth)) add(line);
@@ -257,7 +275,7 @@ class AskUserPanel implements Component, Focusable {
         const leftWidth = Math.floor((contentWidth - 3) / 2);
         const rightWidth = contentWidth - leftWidth - 3;
         const optionLines = this.renderOptions(options, leftWidth);
-        const previewLines = wrapTextWithAnsi(preview, rightWidth);
+        const previewLines = this.renderMarkdown(preview, rightWidth);
         const rowCount = Math.max(optionLines.length, previewLines.length);
         for (let index = 0; index < rowCount; index++) {
           const left = optionLines[index] ?? "";
@@ -268,7 +286,7 @@ class AskUserPanel implements Component, Focusable {
         for (const line of this.renderOptions(options, contentWidth)) add(line);
         if (preview) {
           add("");
-          wrap(lines, preview, contentWidth, "  ");
+          for (const line of this.renderMarkdown(preview, contentWidth - 2)) add(`  ${line}`);
         }
       }
     } else {
@@ -283,6 +301,71 @@ class AskUserPanel implements Component, Focusable {
     this.cachedWidth = width;
     this.cachedLines = this.frame(lines, renderWidth, contentWidth);
     return this.cachedLines;
+  }
+
+  private renderMarkdown(text: string, width: number, defaultTextStyle?: DefaultTextStyle): string[] {
+    const renderWidth = Math.max(1, width);
+    const sourceLines = text.split("\n");
+    const lines: string[] = [];
+    const markdownLines: string[] = [];
+    let inFence = false;
+    const flushMarkdown = () => {
+      if (!markdownLines.length) return;
+      lines.push(...new Markdown(markdownLines.join("\n"), 0, 0, this.theme.markdown, defaultTextStyle).render(renderWidth));
+      markdownLines.length = 0;
+    };
+
+    for (let index = 0; index < sourceLines.length; index++) {
+      const line = sourceLines[index];
+      if (/^\s*(```|~~~)/.test(line)) inFence = !inFence;
+      if (!inFence && index + 1 < sourceLines.length && line.includes("|") && isPipeTableDivider(sourceLines[index + 1])) {
+        flushMarkdown();
+        const rows = [splitPipeTableRow(line)];
+        index += 2;
+        while (index < sourceLines.length && sourceLines[index].includes("|")) {
+          rows.push(splitPipeTableRow(sourceLines[index]));
+          index++;
+        }
+        index--;
+        lines.push(...this.renderPipeTable(rows, renderWidth, defaultTextStyle));
+        if (sourceLines[index + 1]?.trim()) lines.push("");
+        continue;
+      }
+      markdownLines.push(line);
+    }
+    flushMarkdown();
+    return lines;
+  }
+
+  private renderPipeTable(rows: string[][], width: number, defaultTextStyle?: DefaultTextStyle): string[] {
+    const columnCount = Math.max(...rows.map((row) => row.length));
+    if (!columnCount || width < columnCount * 2 + 1) return new Markdown(rows.map((row) => row.join(" | ")).join("\n"), 0, 0, this.theme.markdown, defaultTextStyle).render(Math.max(1, width));
+    const boxed = width >= columnCount * 4 + 1;
+    const cellWidth = boxed ? width - (columnCount * 3 + 1) : width - (columnCount + 1);
+    const columnWidths = Array.from({ length: columnCount }, (_, index) => Math.floor(cellWidth / columnCount) + (index < cellWidth % columnCount ? 1 : 0));
+    const cell = (text: string, column: number, header = false) => {
+      const sourceWidth = Math.max(1, visibleWidth(text));
+      const rendered = new Markdown(text, 0, 0, this.theme.markdown, defaultTextStyle).render(sourceWidth).join(" ").trimEnd();
+      const truncated = truncateToWidth(rendered, columnWidths[column], "...", true);
+      return header ? this.theme.bold(truncated) : truncated;
+    };
+    const row = (cells: string[], header = false) => {
+      const rendered = columnWidths.map((_, index) => cell(cells[index] ?? "", index, header));
+      return boxed ? `│ ${rendered.join(" │ ")} │` : `|${rendered.join("|")}|`;
+    };
+    if (!boxed) {
+      const divider = `|${columnWidths.map((columnWidth) => "-".repeat(columnWidth)).join("|")}|`;
+      return [row(rows[0], true), divider, ...rows.slice(1).map((cells) => row(cells))];
+    }
+    const dividerCells = columnWidths.map((columnWidth) => "─".repeat(columnWidth));
+    const divider = `├─${dividerCells.join("─┼─")}─┤`;
+    return [
+      `┌─${dividerCells.join("─┬─")}─┐`,
+      row(rows[0], true),
+      divider,
+      ...rows.slice(1).flatMap((cells, index) => (index ? [divider, row(cells)] : [row(cells)])),
+      `└─${dividerCells.join("─┴─")}─┘`,
+    ];
   }
 
   private frame(lines: string[], width: number, contentWidth: number): string[] {
@@ -309,8 +392,13 @@ class AskUserPanel implements Component, Focusable {
       const selected = this.selected.has(option.label);
       const marker = focused ? ">" : " ";
       const checkbox = this.params.multiSelect ? (selected ? "[x] " : "[ ] ") : "";
-      wrap(lines, `${marker} ${checkbox}${this.theme.bold(option.label)}`, width);
-      if (option.description) wrap(lines, this.theme.muted(option.description), width, "    ");
+      const optionPrefix = `${marker} ${checkbox}`;
+      for (const [lineIndex, line] of this.renderMarkdown(option.label, width - visibleWidth(optionPrefix), { bold: true }).entries()) {
+        lines.push(`${lineIndex === 0 ? optionPrefix : " ".repeat(visibleWidth(optionPrefix))}${line}`);
+      }
+      if (option.description) {
+        for (const line of this.renderMarkdown(option.description, width - 4, { color: this.theme.muted })) lines.push(`    ${line}`);
+      }
     }
     return lines;
   }
@@ -370,6 +458,22 @@ export default function askBetter(pi: ExtensionAPI): void {
             accent: (text) => theme.fg("accent", text),
             bold: (text) => theme.bold(text),
             muted: (text) => theme.fg("muted", text),
+            markdown: {
+              heading: (text) => theme.fg("accent", theme.bold(text)),
+              link: (text) => theme.fg("accent", text),
+              linkUrl: (text) => theme.fg("muted", text),
+              code: (text) => theme.fg("warning", text),
+              codeBlock: (text) => theme.fg("warning", text),
+              codeBlockBorder: (text) => theme.fg("muted", text),
+              quote: (text) => theme.fg("muted", text),
+              quoteBorder: (text) => theme.fg("muted", text),
+              hr: (text) => theme.fg("muted", text),
+              listBullet: (text) => theme.fg("accent", text),
+              bold: (text) => theme.bold(text),
+              italic: (text) => theme.fg("accent", text),
+              strikethrough: (text) => theme.fg("muted", text),
+              underline: (text) => theme.fg("accent", text),
+            },
             borderColor: (text) => theme.fg("accent", text),
             selectList: {
               selectedPrefix: (text) => theme.fg("accent", text),

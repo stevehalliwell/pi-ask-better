@@ -27,7 +27,7 @@ When Pi needs your input, it shows one focused, bordered question panel with a l
 - For questions that allow several choices, **Space** checks or unchecks a choice, then **Enter** sends your selections.
 - **Press Escape** to cancel.
 
-For option-based questions, agents can mark recommended choices. Before you type or move, Enter accepts that recommendation; it is shown as ` - recommended`. If no recommendation is supplied, the first choice is the fallback and is shown as ` - default`.
+For option-based questions, agents can mark a recommended choice, or several in a multi-select question. Before you type or move, Enter accepts that recommendation; it is shown as ` - recommended`. If no recommendation is supplied, the first choice is the fallback and is shown as ` - default`.
 
 Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
 

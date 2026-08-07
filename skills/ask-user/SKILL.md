@@ -41,8 +41,8 @@ Send one `question`, optional `header` and `tab`, optional `options`, optional `
 
 This sample uses every request field and Markdown in the question, option label, description, and preview. With options present, users may still type custom text; with `multiSelect: true`, Space toggles choices and Enter returns checked labels.
 
-- Each option has a required `label` and optional `description`, `preview`, and `recommended` boolean. For option-based questions, mark the option or options you recommend with `recommended: true`.
-- Before any typing or navigation, Enter returns the recommended option in single-select or all marked options in multi-select. If no valid recommendation is marked, it returns the first declared option instead.
+- Each option has a required `label` and optional `description`, `preview`, and `recommended` boolean. For option-based questions, mark one option in single-select or the options you recommend in multi-select with `recommended: true`.
+- Before any typing or navigation, Enter returns the recommended option in single-select or all marked options in multi-select. If no option is marked, or several are marked in single-select, it returns the first declared option instead.
 - Single-select results contain either `{ tab, answer }` for an option or `{ tab, custom }` for typed text.
 - Multi-select results contain `{ tab, answers }` with selected option labels.
 - Cancellation returns `{ cancelled: true, answers: [] }`.
@@ -57,7 +57,7 @@ Use option labels as the exact returned value. Markdown formatting is display-on
 - Down enters choices; Up from the first choice returns to the editor. Escape cancels.
 - In single-select mode, Enter selects the focused option. When exactly one filtered option remains, it is focused while typing and Enter selects it.
 - In multi-select mode, Space toggles the focused choice and Enter submits checked choices.
-- Before input or navigation, the default is visibly labelled ` - recommended` when explicitly marked, or ` - default` when the first option is used as fallback.
+- Before input or navigation, explicitly marked options are visibly labelled ` - recommended`. When no option is marked, the first-option fallback is visibly labelled ` - default`.
 - Question text, option labels, option descriptions, and previews support terminal-safe Markdown: headings, emphasis, code, lists, links, blockquotes, and pipe tables. Wide previews appear beside choices when space permits; narrow previews appear below.
 
 ## Rules

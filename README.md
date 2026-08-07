@@ -19,13 +19,15 @@ Restart Pi or run `/reload` after installation. The package includes a model-inv
 When Pi needs your input, it shows one focused, bordered question panel with a labelled answer box and choices.
 
 - **Type right away** to filter the choices or write your own answer.
-- **Press Enter** in the text box to send what you wrote.
+- **Press Enter** in the text box to send what you wrote, or accept the displayed default before you type or move.
 - **Press Down** to move into the matching choices.
 - Keep typing, pasting, or editing your text while a choice remains focused.
 - **Press Up** from the first choice to return to the text box.
 - **Press Enter** on a choice to send it immediately; in single-select questions, it also selects a sole filtered match.
 - For questions that allow several choices, **Space** checks or unchecks a choice, then **Enter** sends your selections.
 - **Press Escape** to cancel.
+
+For option-based questions, agents can mark recommended choices. Before you type or move, Enter accepts that recommendation; it is shown as ` - recommended`. If no recommendation is supplied, the first choice is the fallback and is shown as ` - default`.
 
 Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
 

@@ -20,6 +20,7 @@ interface Option {
   label: string;
   description?: string;
   preview?: string;
+  recommended?: boolean;
 }
 
 interface PanelTheme extends EditorTheme {
@@ -57,6 +58,7 @@ const OptionSchema = Type.Object(
     label: Type.Optional(Type.String({ description: "Short option label." })),
     description: Type.Optional(Type.String({ description: "Optional explanation below the label." })),
     preview: Type.Optional(Type.String({ description: "Optional focused-option preview." })),
+    recommended: Type.Optional(Type.Boolean({ description: "Mark this option as recommended/default." })),
   },
   { additionalProperties: true },
 );
@@ -97,6 +99,7 @@ function normalizeOption(value: unknown): Option | undefined {
     label,
     ...(description ? { description } : {}),
     ...(preview ? { preview } : {}),
+    ...(input.recommended === true ? { recommended: true } : {}),
   };
 }
 
@@ -137,6 +140,7 @@ class AskUserPanel implements Component, Focusable {
   private readonly selected = new Set<string>();
   private optionIndex = 0;
   private editing = true;
+  private pristine = true;
   private cachedWidth?: number;
   private cachedLines?: string[];
   private _focused = false;
@@ -172,14 +176,36 @@ class AskUserPanel implements Component, Focusable {
     };
   }
 
+  private effectiveDefaults(): Option[] {
+    const recommended = this.params.options.filter((option) => option.recommended);
+    if (this.params.multiSelect ? recommended.length : recommended.length === 1) return recommended;
+    return this.params.options[0] ? [this.params.options[0]] : [];
+  }
+
+  private displayOptions(): Option[] {
+    const defaults = this.effectiveDefaults();
+    return [...defaults, ...this.params.options.filter((option) => !defaults.includes(option))];
+  }
+
   private visibleOptions(): Option[] {
-    return fuzzyFilter(this.params.options, this.editor.getText(), (option) => `${option.label} ${option.description ?? ""}`);
+    return fuzzyFilter(this.displayOptions(), this.editor.getText(), (option) => `${option.label} ${option.description ?? ""}`);
   }
 
   private refresh(tui: { requestRender(): void }): void {
     this.cachedWidth = undefined;
     this.cachedLines = undefined;
     tui.requestRender();
+  }
+
+  private finishDefaults(): void {
+    const defaults = this.effectiveDefaults();
+    if (!defaults.length) return;
+    this.editor.setText("");
+    if (this.params.multiSelect) {
+      this.onDone({ cancelled: false, answers: [{ tab: this.params.tab, answers: defaults.map((option) => option.label) }] });
+      return;
+    }
+    this.onDone({ cancelled: false, answers: [{ tab: this.params.tab, answer: defaults[0].label }] });
   }
 
   private finishOption(option: Option): void {
@@ -194,16 +220,21 @@ class AskUserPanel implements Component, Focusable {
 
   handleInput(data: string): void {
     const options = this.visibleOptions();
+    if (matchesKey(data, Key.escape)) {
+      this.onDone({ cancelled: true, answers: [] });
+      return;
+    }
+    if (this.pristine && matchesKey(data, Key.enter) && this.params.options.length) {
+      this.finishDefaults();
+      return;
+    }
+    if (!matchesKey(data, Key.enter)) this.pristine = false;
     if (this.editing) {
       if (matchesKey(data, Key.down) && options.length) {
         this.editing = false;
         this.editor.focused = false;
         this.optionIndex = 0;
         this.refresh(this.tui);
-        return;
-      }
-      if (matchesKey(data, Key.escape)) {
-        this.onDone({ cancelled: true, answers: [] });
         return;
       }
       if (!this.params.multiSelect && options.length === 1 && matchesKey(data, Key.enter)) {
@@ -227,10 +258,6 @@ class AskUserPanel implements Component, Focusable {
     if (matchesKey(data, Key.down)) {
       this.optionIndex = Math.min(this.optionIndex + 1, Math.max(0, options.length - 1));
       this.refresh(this.tui);
-      return;
-    }
-    if (matchesKey(data, Key.escape)) {
-      this.onDone({ cancelled: true, answers: [] });
       return;
     }
     const option = options[this.optionIndex];
@@ -295,8 +322,8 @@ class AskUserPanel implements Component, Focusable {
 
     add("");
     const hint = this.params.multiSelect
-      ? "Type to filter · ↓ choices · ↑ answer · Space toggle · Enter submit · Esc cancel"
-      : "Type to answer · ↓ choices · ↑ answer · Enter selects sole match · Esc cancel";
+      ? "Type to filter · ↓ choices · ↑ answer · Space toggle · Enter default/submit · Esc cancel"
+      : "Type to answer · ↓ choices · ↑ answer · Enter default/sole match · Esc cancel";
     add(this.theme.muted(hint));
     this.cachedWidth = width;
     this.cachedLines = this.frame(lines, renderWidth, contentWidth);
@@ -385,6 +412,8 @@ class AskUserPanel implements Component, Focusable {
 
   private renderOptions(options: Option[], width: number): string[] {
     const lines: string[] = [];
+    const defaults = this.effectiveDefaults();
+    const hasExplicitRecommendation = this.params.options.some((option) => option.recommended);
     for (const [index, option] of options.entries()) {
       const focused = this.editing
         ? !this.params.multiSelect && options.length === 1
@@ -392,9 +421,15 @@ class AskUserPanel implements Component, Focusable {
       const selected = this.selected.has(option.label);
       const marker = focused ? ">" : " ";
       const checkbox = this.params.multiSelect ? (selected ? "[x] " : "[ ] ") : "";
+      const recommendation = option.recommended
+        ? this.theme.accent(" - recommended")
+        : !hasExplicitRecommendation && defaults.includes(option)
+          ? this.theme.accent(" - default")
+          : "";
       const optionPrefix = `${marker} ${checkbox}`;
-      for (const [lineIndex, line] of this.renderMarkdown(option.label, width - visibleWidth(optionPrefix), { bold: true }).entries()) {
-        lines.push(`${lineIndex === 0 ? optionPrefix : " ".repeat(visibleWidth(optionPrefix))}${line}`);
+      const labelWidth = Math.max(1, width - visibleWidth(optionPrefix) - visibleWidth(recommendation));
+      for (const [lineIndex, line] of this.renderMarkdown(option.label, labelWidth, { bold: true }).entries()) {
+        lines.push(`${lineIndex === 0 ? optionPrefix : " ".repeat(visibleWidth(optionPrefix))}${line.trimEnd()}${lineIndex === 0 ? recommendation : ""}`);
       }
       if (option.description) {
         for (const line of this.renderMarkdown(option.description, width - 4, { color: this.theme.muted })) lines.push(`    ${line}`);

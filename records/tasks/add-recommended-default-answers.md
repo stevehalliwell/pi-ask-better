@@ -4,7 +4,7 @@ name: add-recommended-default-answers
 created_at: 2026-08-07T02:36:42.274Z
 desc: "Require every ask_user question to provide a recommended/default answer. Display recommended choices first. When the user presses Enter without typing or moving the cursor, return the recommended default as the user's answer. For multi-select questions, show all recommended items first and return those items when Enter is pressed without typing or cursor movement."
 tags: []
-status: todo
+status: done
 scope: agreed
 ---
 
@@ -53,10 +53,24 @@ scope: agreed
 
 ## Plan
 
-- Extend option parsing and derive effective defaults plus display ordering from the option list.
-- Add pristine-state-aware Enter handling without changing post-interaction behavior.
-- Update user and agent documentation, then run the repository checks.
+1. **Core panel behavior:** extend option parsing, derive stable display ordering and effective defaults, and add pristine-state-aware Enter handling.
+2. **Documentation and verification:** update the packaged skill, README, and CHANGELOG; run repository checks.
+
+## Implemented so far
+
+- Added optional `recommended` option metadata to the public schema and normalization.
+- Added stable effective-default ordering: valid marked recommendations lead; missing or selection-mode-invalid metadata falls back to the first declared option.
+- Added pristine blank-Enter submission for effective defaults while preserving post-input and navigation behavior.
+- Added a visible ` - recommended` or ` - default` postfix directly after each option label, rather than right-aligning it; explicit markings use `recommended`, while no-marking fallback uses `default`.
+
+## Checks
+
+- Passed: `npm run smoke`.
+- Passed: `git diff --check`.
+- Passed: manual interactive TUI verification of the ` - recommended` and ` - default` postfixes.
+- Passed: `npm pack --dry-run`; package includes the updated skill and README.
 
 ## Review / next slice
 
-- Scope agreed 2026-08-07; ready for separate implementation workflow.
+- Updated `skills/ask-user/SKILL.md`, `README.md`, and `CHANGELOG.md` for option recommendations, default Enter behavior, and visible markers.
+- Approved 2026-08-07; complete.

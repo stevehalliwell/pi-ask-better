@@ -1,17 +1,18 @@
 ---
 name: ask-user
-description: "Ask the user to choose an option, state a preference, or answer one focused clarification. Use when an agent needs a decision before continuing, especially for requirements, priorities, confirmations, or mutually exclusive paths; skip when the user already gave a clear instruction, a question is informational, or proceeding cannot affect user-visible behavior or scope."
+description: "Ask the user to choose an option, state a preference, or provide one focused answer or direction. Use when an agent needs a brief answer before continuing, including a yes/no or clarification; skip when the user already gave a clear instruction, the answer needs substantial data or long-form text, or the exchange is ordinary conversation."
 ---
 
 # Ask User
 
-Use the `ask_user` tool for one decision the agent cannot responsibly make alone.
+Use the `ask_user` tool for one focused answer or direction needed before continuing.
 
 ## When to use
 
-- Ask one focused question when the answer changes scope, behavior, priority, compatibility, or the next action.
+- Ask one concise, focused question when a brief answer, including yes/no, resolves ambiguity or determines the next action.
 - Ask dependent questions only after receiving the prior answer.
-- Continue without a question when the user already supplied the answer or proceeding cannot affect user-visible behavior or scope.
+- Use ordinary conversation for discussion or answers needing substantial data or long-form text.
+- Continue without a question when the user already supplied the answer or a reasonable default lets work move forward.
 
 ## Tool contract
 

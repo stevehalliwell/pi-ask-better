@@ -466,7 +466,7 @@ export default function askBetter(pi: ExtensionAPI): void {
       "Ask one focused question with selectable options or free text. Use for a decision, preference, or clarification; do not queue dependent questions. Result JSON: { cancelled, answers: [{ tab, answer|custom|answers }] }.",
     promptSnippet: "Ask one focused structured question when a user decision is needed",
     promptGuidelines: [
-      "Use ask_user for one focused decision at a time when requirements are ambiguous; do not ask dependent questions in the same call.",
+      "Use ask_user when a brief user choice, recommendation approval, preference, or clarification is needed before continuing, including selecting presented alternatives; do not replace it with a prose question. Ask dependent questions one at a time.",
     ],
     parameters: AskUserSchema,
     prepareArguments: (raw) => normalizeArguments(raw) as never,

@@ -1,6 +1,6 @@
 ---
 name: ask-user
-description: "Ask the user to choose an option, state a preference, or provide one focused answer or direction. Use when an agent needs a brief answer before continuing, including a yes/no or clarification; skip when the user already gave a clear instruction, the answer needs substantial data or long-form text, or the exchange is ordinary conversation."
+description: "Ask the user to choose presented options, approve a recommendation, state a preference, or provide one focused answer or direction. Use when an agent needs a brief answer before continuing, including a yes/no or clarification; skip when the user already gave a clear instruction, the answer needs substantial data or long-form text, or the exchange is ordinary conversation."
 ---
 
 # Ask User
@@ -9,10 +9,40 @@ Use the `ask_user` tool for one focused answer or direction needed before contin
 
 ## When to use
 
-- Ask one concise, focused question when a brief answer, including yes/no, resolves ambiguity or determines the next action.
+- Ask one concise, focused question when a brief answer, including yes/no, determines the next action. This includes presenting alternatives or a recommended path and needing the user to select or approve it.
+- When you need that response before proceeding, call `ask_user`; do not end the response with a prose question instead.
 - Ask dependent questions only after receiving the prior answer.
 - Use ordinary conversation for discussion or answers needing substantial data or long-form text.
 - Continue without a question when the user already supplied the answer or a reasonable default lets work move forward.
+
+## Avoid prose decision prompts
+
+**Wrong:** Present options, recommend one, then write: “Option 2 is recommended. Would you like me to implement it?”
+
+**Right:** Call `ask_user` with the options, mark the recommended option with `recommended: true`, and wait for the result before proceeding.
+
+### Example: request approval for a recommendation
+
+After comparing approaches, make the approval request through the tool:
+
+```json
+{
+  "header": "Implementation direction",
+  "tab": "Approach",
+  "question": "## Which approach should I implement?\n\nBoth approaches work; **shared tokens** keeps the outputs aligned.",
+  "options": [
+    {
+      "label": "Separate CSS and image tokens",
+      "description": "Keep each output's values independent."
+    },
+    {
+      "label": "Shared TypeScript tokens",
+      "description": "Use one token source for browser and generated-image output.",
+      "recommended": true
+    }
+  ]
+}
+```
 
 ## Tool contract
 

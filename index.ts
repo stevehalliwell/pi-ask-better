@@ -23,6 +23,16 @@ interface Option {
   recommended?: boolean;
 }
 
+interface DisplayOption extends Option {
+  customText?: true;
+}
+
+const customTextOption: DisplayOption = {
+  label: "Enter custom text",
+  description: "Type a response instead of selecting a choice.",
+  customText: true,
+};
+
 interface PanelTheme extends EditorTheme {
   accent: (text: string) => string;
   bold: (text: string) => string;
@@ -140,6 +150,7 @@ class AskUserPanel implements Component, Focusable {
   private readonly selected = new Set<string>();
   private optionIndex = 0;
   private editing = true;
+  private customEntry = false;
   private pristine = true;
   private cachedWidth?: number;
   private cachedLines?: string[];
@@ -187,8 +198,8 @@ class AskUserPanel implements Component, Focusable {
     return [...defaults, ...this.params.options.filter((option) => !defaults.includes(option))];
   }
 
-  private visibleOptions(): Option[] {
-    return fuzzyFilter(this.displayOptions(), this.editor.getText(), (option) => `${option.label} ${option.description ?? ""}`);
+  private visibleOptions(): DisplayOption[] {
+    return [...fuzzyFilter(this.displayOptions(), this.editor.getText(), (option) => `${option.label} ${option.description ?? ""}`), customTextOption];
   }
 
   private refresh(tui: { requestRender(): void }): void {
@@ -208,7 +219,14 @@ class AskUserPanel implements Component, Focusable {
     this.onDone({ cancelled: false, answers: [{ tab: this.params.tab, answer: defaults[0].label }] });
   }
 
-  private finishOption(option: Option): void {
+  private finishOption(option: DisplayOption): void {
+    if (option.customText) {
+      this.editing = true;
+      this.customEntry = true;
+      this.editor.focused = this.focused;
+      this.refresh(this.tui);
+      return;
+    }
     const answers = [...this.selected];
     this.editor.setText("");
     if (this.params.multiSelect) {
@@ -237,8 +255,9 @@ class AskUserPanel implements Component, Focusable {
         this.refresh(this.tui);
         return;
       }
-      if (!this.params.multiSelect && options.length === 1 && matchesKey(data, Key.enter)) {
-        this.finishOption(options[0]);
+      const matchingOptions = options.filter((option) => !option.customText);
+      if (!this.customEntry && !this.params.multiSelect && matchingOptions.length === 1 && matchesKey(data, Key.enter)) {
+        this.finishOption(matchingOptions[0]);
         return;
       }
       this.editor.handleInput(data);
@@ -262,7 +281,7 @@ class AskUserPanel implements Component, Focusable {
       return;
     }
     const option = options[this.optionIndex];
-    if (option && this.params.multiSelect && matchesKey(data, Key.space)) {
+    if (option && !option.customText && this.params.multiSelect && matchesKey(data, Key.space)) {
       if (this.selected.has(option.label)) this.selected.delete(option.label);
       else this.selected.add(option.label);
       this.refresh(this.tui);
@@ -291,7 +310,7 @@ class AskUserPanel implements Component, Focusable {
       }),
     );
     add("");
-    add(this.theme.bold("Your answer"));
+    add(this.theme.bold(this.customEntry ? "Custom answer" : "Your answer"));
     for (const line of this.editor.render(contentWidth)) add(line);
 
     add("");
@@ -411,7 +430,7 @@ class AskUserPanel implements Component, Focusable {
     ];
   }
 
-  private renderOptions(options: Option[], width: number): string[] {
+  private renderOptions(options: DisplayOption[], width: number): string[] {
     const lines: string[] = [];
     const defaults = this.effectiveDefaults();
     const hasExplicitRecommendation = this.params.options.some((option) => option.recommended);

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added a persistent `Enter custom text` choice that forces a typed custom answer even when it matches an option.
 - The free-text input cursor now redraws correctly after keyboard navigation.
 - Strengthened bundled `ask-user` guidance so agents use the decision panel for presented alternatives and recommendation approval rather than ending with a prose question.
 

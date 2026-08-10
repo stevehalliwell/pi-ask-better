@@ -21,6 +21,7 @@ When Pi needs your input, it shows one focused, bordered question panel with a l
 - **Type right away** to filter the choices or write your own answer.
 - **Press Enter** in the text box to send what you wrote, or accept the displayed default before you type or move.
 - **Press Down** to move into the matching choices.
+- Select **Enter custom text** to force a typed response; its visible custom-answer state prevents Enter from selecting a matching option.
 - Keep typing, pasting, or editing your text while a choice remains focused.
 - **Press Up** from the first choice to return to the text box.
 - **Press Enter** on a choice to send it immediately; in single-select questions, it also selects a sole filtered match.

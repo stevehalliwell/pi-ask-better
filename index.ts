@@ -242,6 +242,7 @@ class AskUserPanel implements Component, Focusable {
         return;
       }
       this.editor.handleInput(data);
+      this.refresh(this.tui);
       return;
     }
 

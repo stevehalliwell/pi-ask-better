@@ -14,6 +14,10 @@ pi install git:github.com/stevehalliwell/pi-ask-better
 
 Restart Pi or run `/reload` after installation. The package includes a model-invoked `ask-user` skill that guides agents to use the panel for focused decisions and clarifications.
 
+## Question formats
+
+Agents use `options` for a presented choice, or `yesNo: true` for fixed Yes/No choices. Both formats retain custom-text entry through **Enter custom text**. For unconstrained text, agents ask directly in Pi chat so you get Pi's native editor; `ask_user` no longer accepts a standalone free-text question.
+
 ## What it feels like
 
 When Pi needs your input, it shows one focused, bordered question panel with a labelled answer box and choices.

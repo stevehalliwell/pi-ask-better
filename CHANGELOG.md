@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- A `yesNo: true` question format with fixed Yes/No choices and custom-text entry.
+- A persistent `Enter custom text` choice that forces a typed custom answer even when it matches an option.
+
 ### Changed
 
-- Added a `yesNo: true` question format with fixed Yes/No choices and custom-text entry; standalone free-text ask_user calls now direct agents to Pi chat.
-- Added a persistent `Enter custom text` choice that forces a typed custom answer even when it matches an option.
+- `ask_user` now requires options or `yesNo: true`; use Pi chat for unconstrained text questions.
 - The free-text input cursor now redraws correctly after keyboard navigation.
 - Strengthened bundled `ask-user` guidance so agents use the decision panel for presented alternatives and recommendation approval rather than ending with a prose question.
 

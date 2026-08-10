@@ -30,6 +30,8 @@ When Pi needs your input, it shows one focused, bordered question panel with a l
 
 For option-based questions, agents can mark a recommended choice, or several in a multi-select question. Before you type or move, Enter accepts that recommendation; it is shown as ` - recommended`. If no recommendation is supplied, the first choice is the fallback and is shown as ` - default`.
 
+Agents can also ask fixed yes/no questions while retaining custom text entry. For unconstrained text, agents ask directly in Pi chat so you get Pi's native editor.
+
 Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
 
 Question text, option labels and descriptions, and previews support terminal-safe Markdown: headings, emphasis, code, lists, links, blockquotes, and pipe tables. Markdown is display-only: selecting an option returns its original label text.

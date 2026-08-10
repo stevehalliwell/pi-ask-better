@@ -45,8 +45,11 @@ interface AskUserParams {
   header?: string;
   tab?: string;
   options?: Option[];
+  yesNo?: boolean;
   multiSelect?: boolean;
 }
+
+const yesNoOptions: Option[] = [{ label: "Yes" }, { label: "No" }];
 
 type Answer =
   | { tab: string; answer: string }
@@ -78,8 +81,9 @@ const AskUserSchema = Type.Object(
     question: Type.Optional(Type.String({ description: "The focused question for the user." })),
     header: Type.Optional(Type.String({ description: "Optional short panel heading." })),
     tab: Type.Optional(Type.String({ description: "Stable answer key; defaults to Answer." })),
-    options: Type.Optional(Type.Array(OptionSchema, { description: "Selectable options; omit for free-text only." })),
-    multiSelect: Type.Optional(Type.Boolean({ description: "Allow multiple checked options." })),
+    options: Type.Optional(Type.Array(OptionSchema, { description: "Selectable options; required unless yesNo is true." })),
+    yesNo: Type.Optional(Type.Boolean({ description: "Show fixed Yes and No choices with custom text entry." })),
+    multiSelect: Type.Optional(Type.Boolean({ description: "Allow multiple checked options; cannot be combined with yesNo." })),
   },
   { additionalProperties: true },
 );
@@ -118,6 +122,17 @@ function normalizeArguments(raw: unknown): AskUserParams {
   const optionInput = input.options ?? input.choices ?? input.answers;
   const rawOptions = Array.isArray(optionInput) ? optionInput : optionInput === undefined ? [] : [optionInput];
   const options = rawOptions.map(normalizeOption).filter((option): option is Option => !!option);
+  const yesNo = input.yesNo === true;
+  const multiSelect = input.multiSelect === true || input.allowMultiple === true || input.multi === true;
+  if (yesNo && optionInput !== undefined) {
+    throw new Error("ask_user: use either yesNo: true or options, not both.");
+  }
+  if (yesNo && multiSelect) {
+    throw new Error("ask_user: yesNo cannot be combined with multiSelect.");
+  }
+  if (!yesNo && !options.length) {
+    throw new Error("ask_user: provide options or yesNo: true. Ask unconstrained text questions directly in Pi chat.");
+  }
   const question = cleanMultiline(input.question ?? input.prompt ?? input.title);
   const header = cleanText(input.header ?? input.title);
   const tab = cleanText(input.tab ?? input.id ?? input.key);
@@ -126,7 +141,8 @@ function normalizeArguments(raw: unknown): AskUserParams {
     ...(header ? { header } : {}),
     ...(tab ? { tab } : {}),
     ...(options.length ? { options } : {}),
-    multiSelect: input.multiSelect === true || input.allowMultiple === true || input.multi === true,
+    ...(yesNo ? { yesNo: true } : {}),
+    multiSelect,
   };
 }
 
@@ -469,7 +485,7 @@ function detailsFor(params: AskUserParams, payload: AskUserPayload): AskUserDeta
   return {
     ...payload,
     question: params.question ?? "",
-    options: (params.options ?? []).map((option) => option.label),
+    options: (params.yesNo ? yesNoOptions : params.options ?? []).map((option) => option.label),
   };
 }
 
@@ -483,10 +499,10 @@ export default function askBetter(pi: ExtensionAPI): void {
     name: "ask_user",
     label: "Ask User",
     description:
-      "Ask one focused question with selectable options or free text. Use for a decision, preference, or clarification; do not queue dependent questions. Result JSON: { cancelled, answers: [{ tab, answer|custom|answers }] }.",
+      "Ask one focused question with options or yesNo: true. For unconstrained text, ask directly in Pi chat. Do not queue dependent questions. Result JSON: { cancelled, answers: [{ tab, answer|custom|answers }] }.",
     promptSnippet: "Ask one focused structured question when a user decision is needed",
     promptGuidelines: [
-      "Use ask_user when a brief user choice, recommendation approval, preference, or clarification is needed before continuing, including selecting presented alternatives; do not replace it with a prose question. Ask dependent questions one at a time.",
+      "Use ask_user when a brief user choice, recommendation approval, preference, or clarification is needed before continuing, including selecting presented alternatives; use yesNo: true for a yes/no question. Ask unconstrained text questions directly in Pi chat. Ask dependent questions one at a time.",
     ],
     parameters: AskUserSchema,
     prepareArguments: (raw) => normalizeArguments(raw) as never,
@@ -504,7 +520,7 @@ export default function askBetter(pi: ExtensionAPI): void {
         question: normalized.question ?? "",
         header: normalized.header,
         tab: normalized.tab || "Answer",
-        options: normalized.options ?? [],
+        options: normalized.yesNo ? yesNoOptions : normalized.options ?? [],
         multiSelect: normalized.multiSelect === true,
       };
       const payload = await ctx.ui.custom<AskUserPayload>(

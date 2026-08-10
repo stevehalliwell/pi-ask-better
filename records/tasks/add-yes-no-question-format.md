@@ -4,8 +4,8 @@ name: add-yes-no-question-format
 created_at: 2026-08-10T00:33:37.042Z
 desc: "Add a yes/no question format that retains custom-text entry, and remove standalone free-text-only ask_user questions in favor of asking those questions directly in Pi chat."
 tags: []
-status: todo
-scope: draft
+status: done
+scope: agreed
 ---
 
 ## Scope
@@ -32,14 +32,43 @@ scope: draft
 
 ### Acceptance
 
-- An agent can invoke a yes/no question and the user can answer yes, no, or enter custom text.
-- ask_user no longer presents a standalone free-text-only interaction.
+- An agent can invoke `ask_user({ question, yesNo: true })`; the user can answer `Yes`, `No`, or enter custom text.
+- ask_user rejects calls that provide neither `options` nor `yesNo: true`, directing agents to ask unconstrained questions in Pi chat.
+- ask_user rejects `yesNo` combined with explicit options or `multiSelect: true`.
 - Existing option-based question behavior continues to work.
 
 ## Open questions
 
-- TBD: public API shape for yes/no (for example, a dedicated parameter or a convenience option form).
-- TBD: behavior when ask_user is invoked without options after free-text-only support is removed.
+- None.
+
+## Decisions
+
+- 2026-08-10: Use a dedicated `yesNo: true` flag rather than relying on agents to supply `Yes` and `No` options.
+- 2026-08-10: Reject no-format and ambiguous format combinations with errors rather than silently normalizing them.
+
+## Plan
+
+- Add `yesNo` to the public tool schema and normalize it to fixed `Yes`/`No` options.
+- Validate format combinations before rendering the panel.
+- Remove standalone free-text-only panel behavior and direct agents to Pi chat in tool guidance and documentation.
+- Verify yes/no, option, multi-select, and invalid-call flows.
+
+## Implemented so far
+
+- Added `yesNo: true` schema support and normalized it to fixed `Yes`/`No` options.
+- Rejects no-format calls and `yesNo` combined with options or multi-select.
+- Updated tool guidance, bundled ask-user guidance, README, and the unreleased changelog.
+
+## Checks
+
+- Passed: `npm run smoke`.
+- Passed: `npm pack --dry-run`.
+- Passed: `git diff --check`.
+- Passed: manual TUI verification of yes/no, forced custom text, option, multi-select, and invalid-call flows.
+
+## Review / next slice
+
+- Approved 2026-08-10: user confirmed the feature worked.
 
 ## Notes
 

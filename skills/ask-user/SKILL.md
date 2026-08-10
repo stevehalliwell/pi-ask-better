@@ -46,7 +46,7 @@ After comparing approaches, make the approval request through the tool:
 
 ## Tool contract
 
-Send one `question`, optional `header` and `tab`, optional `options`, optional `multiSelect`, and optional per-option `recommended`. Do not invent multiple-question, required-answer, or free-text-mode parameters.
+Send one `question`, optional `header` and `tab`, and either `options` or `yesNo: true`. `multiSelect` and per-option `recommended` apply only to `options`. Do not invent multiple-question, required-answer, or free-text-mode parameters.
 
 ```json
 {
@@ -72,6 +72,7 @@ Send one `question`, optional `header` and `tab`, optional `options`, optional `
 This sample uses every request field and Markdown in the question, option label, description, and preview. With options present, users may still type custom text; with `multiSelect: true`, Space toggles choices and Enter returns checked labels.
 
 - Each option has a required `label` and optional `description`, `preview`, and `recommended` boolean. For option-based questions, mark one option in single-select or the options you recommend in multi-select with `recommended: true`.
+- Use `yesNo: true` for fixed `Yes`/`No` choices. It still provides `Enter custom text`; do not combine it with `options` or `multiSelect`.
 - Before any typing or navigation, Enter returns the recommended option in single-select or all marked options in multi-select. If no option is marked, or several are marked in single-select, it returns the first declared option instead.
 - Single-select results contain either `{ tab, answer }` for an option or `{ tab, custom }` for typed text.
 - Multi-select results contain `{ tab, answers }` with selected option labels.
@@ -93,6 +94,6 @@ Use option labels as the exact returned value. Markdown formatting is display-on
 ## Rules
 
 - Keep the question neutral, concrete, and answerable without hidden context.
-- Use options for genuine choices; leave options out for free-text input.
+- Use options or `yesNo: true` for structured choices. Ask unconstrained or substantial text questions directly in Pi chat.
 - Use the tool for one decision, not a survey; never collect secrets or replace an instruction the user already gave.
 - After a result, state the selected value or cancellation outcome before acting on it.

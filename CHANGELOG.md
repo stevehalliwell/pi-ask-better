@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Strengthened always-active `ask_user` guidance: agents use the panel—not a prose question—for focused structured answers needed before continuing, while inspecting context first and proceeding with clear or reversible defaults.
+
 ## [0.3.0]
 
 ### Added

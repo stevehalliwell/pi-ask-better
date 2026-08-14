@@ -4,6 +4,15 @@ Pi Ask Better makes it easy to answer an agent's questions without losing the co
 
 You choose an option or type your own answer; Pi continues with your answer instead of guessing.
 
+## Scope
+
+Pi Ask Better is deliberately opinionated: it does question panels the way its developer prefers, and no more. If you need a more feature-rich ask extension, consider one of these alternatives:
+
+- [@juicesharp/rpiv-ask-user-question](https://pi.dev/packages/@juicesharp/rpiv-ask-user-question)
+- [pi-ask-user](https://pi.dev/packages/pi-ask-user)
+- [@mrclrchtr/supi-ask-user](https://pi.dev/packages/@mrclrchtr/supi-ask-user)
+- [@zhushanwen/pi-ask-user](https://pi.dev/packages/@zhushanwen/pi-ask-user)
+
 ## Install
 
 Install from the [GitHub repository](https://github.com/stevehalliwell/pi-ask-better) as a Pi git package:
@@ -13,6 +22,8 @@ pi install git:github.com/stevehalliwell/pi-ask-better
 ```
 
 Restart Pi or run `/reload` after installation. The package includes a model-invoked `ask-user` skill that guides agents to use the panel for focused decisions and clarifications.
+
+When an agent needs your answer before continuing, it uses the panel for a structured clarification, preference, confirmation, recommendation approval, or choice between alternatives. It first checks available context and proceeds without asking when the answer is clear or a reversible default is enough. For unconstrained or substantial text, it asks in Pi chat instead.
 
 ## Question formats
 

@@ -523,6 +523,7 @@ export default function askBetter(pi: ExtensionAPI): void {
         options: normalized.yesNo ? yesNoOptions : normalized.options ?? [],
         multiSelect: normalized.multiSelect === true,
       };
+      ctx.ui.setWorkingVisible(false);
       const payload = await ctx.ui.custom<AskUserPayload>(
         (tui, theme, _keybindings, done) =>
           new AskUserPanel(panelParams, done, tui, {
@@ -555,7 +556,7 @@ export default function askBetter(pi: ExtensionAPI): void {
             },
           }),
         { overlay: false },
-      );
+      ).finally(() => ctx.ui.setWorkingVisible(true));
       return {
         content: [{ type: "text", text: JSON.stringify(payload) }],
         details: detailsFor(panelParams, payload),

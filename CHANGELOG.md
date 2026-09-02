@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Paused Pi's working animation while an `ask_user` panel is open, preventing continuous terminal redraws during a long wait.
 - Strengthened always-active `ask_user` guidance: agents use the panel—not a prose question—for focused structured answers needed before continuing, while inspecting context first and proceeding with clear or reversible defaults.
 
 ## [0.3.0]

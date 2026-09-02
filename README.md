@@ -31,7 +31,7 @@ Agents use `options` for a presented choice, or `yesNo: true` for fixed Yes/No c
 
 ## What it feels like
 
-When Pi needs your input, it shows one focused, bordered question panel with a labelled answer box and choices.
+When Pi needs your input, it shows one focused, bordered question panel with a labelled answer box and choices. Pi's working animation pauses while the panel is open, so a long-lived question does not keep redrawing the terminal.
 
 - **Type right away** to filter the choices or write your own answer.
 - **Press Enter** in the text box to send what you wrote, or accept the displayed default before you type or move.

@@ -1,7 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
+  CURSOR_MARKER,
   Editor,
   Markdown,
+  ScrollView,
+  type KeybindingsManager,
   type DefaultTextStyle,
   type EditorTheme,
   type MarkdownTheme,
@@ -170,6 +173,10 @@ class AskUserPanel implements Component, Focusable {
   private pristine = true;
   private cachedWidth?: number;
   private cachedLines?: string[];
+  private readonly viewport: ScrollView;
+  private followFocus = true;
+  private focusedOptionLine = 0;
+  private optionsStartLine = 0;
   private _focused = false;
 
   get focused(): boolean {
@@ -186,7 +193,12 @@ class AskUserPanel implements Component, Focusable {
     private readonly onDone: (payload: AskUserPayload) => void,
     private readonly tui: ConstructorParameters<typeof Editor>[0],
     private readonly theme: PanelTheme,
+    private readonly keybindings: KeybindingsManager,
   ) {
+    this.viewport = new ScrollView({
+      render: (width) => this.renderContent(width),
+      invalidate: () => this.invalidate(),
+    });
     const editorTheme: EditorTheme = {
       borderColor: (text) => theme.borderColor(text),
       selectList: theme.selectList,
@@ -254,17 +266,27 @@ class AskUserPanel implements Component, Focusable {
 
   handleInput(data: string): void {
     const options = this.visibleOptions();
-    if (matchesKey(data, Key.escape)) {
+    if (this.keybindings.matches(data, "tui.select.cancel")) {
       this.onDone({ cancelled: true, answers: [] });
       return;
     }
-    if (this.pristine && matchesKey(data, Key.enter) && this.params.options.length) {
+    const confirm = this.keybindings.matches(data, this.editing ? "tui.input.submit" : "tui.select.confirm");
+    if (this.pristine && confirm && this.params.options.length) {
       this.finishDefaults();
       return;
     }
-    if (!matchesKey(data, Key.enter)) this.pristine = false;
+    if (!confirm) this.pristine = false;
+    const pageUp = this.keybindings.matches(data, "tui.select.pageUp") || this.keybindings.matches(data, "tui.editor.pageUp");
+    const pageDown = this.keybindings.matches(data, "tui.select.pageDown") || this.keybindings.matches(data, "tui.editor.pageDown");
+    if (pageUp || pageDown) {
+      this.followFocus = false;
+      this.viewport.scrollBy((pageUp ? -1 : 1) * Math.max(1, this.viewport.viewportHeight - 1));
+      this.tui.requestRender();
+      return;
+    }
+    this.followFocus = true;
     if (this.editing) {
-      if (matchesKey(data, Key.down) && options.length) {
+      if (this.keybindings.matches(data, "tui.select.down") && options.length) {
         this.editing = false;
         this.editor.focused = false;
         this.optionIndex = 0;
@@ -272,7 +294,7 @@ class AskUserPanel implements Component, Focusable {
         return;
       }
       const matchingOptions = options.filter((option) => !option.customText);
-      if (!this.customEntry && !this.params.multiSelect && matchingOptions.length === 1 && matchesKey(data, Key.enter)) {
+      if (!this.customEntry && !this.params.multiSelect && matchingOptions.length === 1 && confirm) {
         this.finishOption(matchingOptions[0]);
         return;
       }
@@ -281,7 +303,7 @@ class AskUserPanel implements Component, Focusable {
       return;
     }
 
-    if (matchesKey(data, Key.up)) {
+    if (this.keybindings.matches(data, "tui.select.up")) {
       if (this.optionIndex === 0) {
         this.editing = true;
         this.editor.focused = this.focused;
@@ -291,7 +313,7 @@ class AskUserPanel implements Component, Focusable {
       this.refresh(this.tui);
       return;
     }
-    if (matchesKey(data, Key.down)) {
+    if (this.keybindings.matches(data, "tui.select.down")) {
       this.optionIndex = Math.min(this.optionIndex + 1, Math.max(0, options.length - 1));
       this.refresh(this.tui);
       return;
@@ -303,7 +325,7 @@ class AskUserPanel implements Component, Focusable {
       this.refresh(this.tui);
       return;
     }
-    if (option && matchesKey(data, Key.enter)) {
+    if (option && confirm) {
       this.finishOption(option);
       return;
     }
@@ -311,12 +333,43 @@ class AskUserPanel implements Component, Focusable {
   }
 
   render(width: number): string[] {
-    if (this.cachedWidth === width && this.cachedLines) return this.cachedLines;
     const renderWidth = Math.max(1, width);
-    const contentWidth = renderWidth >= 5 ? renderWidth - 4 : renderWidth;
+    // Keep transcript space in both regular and fullscreen modes.
+    const height = Math.max(1, Math.floor(this.tui.terminal.rows * 0.6));
+    const framed = renderWidth >= 5 && height >= 6;
+    const contentWidth = framed ? renderWidth - 4 : renderWidth;
+    const lines = this.viewport.render(contentWidth);
+    const viewportHeight = Math.max(1, height - (framed ? 5 : 0));
+    this.viewport.updateLayout(lines.length, viewportHeight, () => this.tui.requestRender());
+    if (this.followFocus) {
+      const cursorLine = lines.findIndex((line) => line.includes(CURSOR_MARKER));
+      const target = this.editing ? Math.max(0, cursorLine) : this.optionsStartLine + this.focusedOptionLine;
+      if (target < this.viewport.scrollTop) this.viewport.scrollTo(target);
+      else if (target >= this.viewport.scrollTop + viewportHeight) this.viewport.scrollTo(target - viewportHeight + 1);
+    }
+    const visible = lines.slice(this.viewport.scrollTop, this.viewport.scrollTop + viewportHeight);
+    if (!framed) return visible;
+    const keys = (action: Parameters<KeybindingsManager["getKeys"]>[0]) => this.keybindings.getKeys(action).join("/") || "unbound";
+    const scrollKeys = (direction: "pageUp" | "pageDown") => {
+      const reserved = this.tui.mode === "fullscreen" ? this.keybindings.getKeys(`tui.altScreen.${direction}`) : [];
+      return [...new Set([...this.keybindings.getKeys(`tui.select.${direction}`), ...this.keybindings.getKeys(`tui.editor.${direction}`)])]
+        .filter((key) => !reserved.includes(key)).join("/") || "unbound";
+    };
+    const status = lines.length > viewportHeight
+      ? `${this.viewport.scrollTop + 1}–${Math.min(lines.length, this.viewport.scrollTop + viewportHeight)} of ${lines.length} · `
+      : "";
+    visible.push(truncateToWidth(this.theme.muted(`${status}${scrollKeys("pageUp")} / ${scrollKeys("pageDown")} scroll`), contentWidth));
+    visible.push(truncateToWidth(this.theme.muted(
+      `${keys("tui.select.down")} choices · ${keys("tui.select.up")} answer · ${this.params.multiSelect ? "Space toggle · " : ""}${keys(this.editing ? "tui.input.submit" : "tui.select.confirm")} submit · ${keys("tui.select.cancel")} cancel`,
+    ), contentWidth));
+    return this.frame(visible, renderWidth, contentWidth);
+  }
+
+  private renderContent(contentWidth: number): string[] {
+    if (this.cachedWidth === contentWidth && this.cachedLines) return this.cachedLines;
     const options = this.visibleOptions();
     const lines: string[] = [];
-    const add = (text: string) => lines.push(truncateToWidth(text, contentWidth));
+    const add = (text: string) => lines.push(truncateToWidth(text, contentWidth, ""));
 
     if (this.params.header) wrap(lines, this.theme.bold(this.params.header), contentWidth);
     lines.push(
@@ -331,6 +384,7 @@ class AskUserPanel implements Component, Focusable {
 
     add("");
     add(this.theme.bold("Choices"));
+    this.optionsStartLine = lines.length;
     if (options.length) {
       const preview = options[this.optionIndex]?.preview;
       const split = !!preview && contentWidth >= 88;
@@ -356,13 +410,8 @@ class AskUserPanel implements Component, Focusable {
       add(this.theme.muted("No matching options — press Enter to submit free text."));
     }
 
-    add("");
-    const hint = this.params.multiSelect
-      ? "Type to filter · ↓ choices · ↑ answer · Space toggle · Enter default/submit · Esc cancel"
-      : "Type to answer · ↓ choices · ↑ answer · Enter default/sole match · Esc cancel";
-    add(this.theme.muted(hint));
-    this.cachedWidth = width;
-    this.cachedLines = this.frame(lines, renderWidth, contentWidth);
+    this.cachedWidth = contentWidth;
+    this.cachedLines = lines;
     return this.cachedLines;
   }
 
@@ -451,6 +500,7 @@ class AskUserPanel implements Component, Focusable {
     const defaults = this.effectiveDefaults();
     const hasExplicitRecommendation = this.params.options.some((option) => option.recommended);
     for (const [index, option] of options.entries()) {
+      if (index === this.optionIndex) this.focusedOptionLine = lines.length;
       const focused = this.editing
         ? !this.params.multiSelect && options.length === 1
         : index === this.optionIndex;
@@ -498,6 +548,8 @@ export default function askBetter(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "ask_user",
     label: "Ask User",
+    exposure: "model-only",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     description:
       "Ask one focused question with options or yesNo: true. For unconstrained text, ask directly in Pi chat. Do not queue dependent questions. Result JSON: { cancelled, answers: [{ tab, answer|custom|answers }] }.",
     promptSnippet: "Ask one focused structured question when a user decision is needed",
@@ -507,9 +559,9 @@ export default function askBetter(pi: ExtensionAPI): void {
     parameters: AskUserSchema,
     prepareArguments: (raw) => normalizeArguments(raw) as never,
     executionMode: "sequential",
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const normalized = normalizeArguments(params);
-      if (ctx.mode !== "tui") {
+      if (ctx.mode !== "tui" || signal?.aborted) {
         const payload: AskUserPayload = { cancelled: true, answers: [] };
         return {
           content: [{ type: "text", text: JSON.stringify(payload) }],
@@ -523,40 +575,57 @@ export default function askBetter(pi: ExtensionAPI): void {
         options: normalized.yesNo ? yesNoOptions : normalized.options ?? [],
         multiSelect: normalized.multiSelect === true,
       };
+      let onAbort: (() => void) | undefined;
+      let abortTimer: ReturnType<typeof setTimeout> | undefined;
+      let payload: AskUserPayload;
       ctx.ui.setWorkingVisible(false);
-      const payload = await ctx.ui.custom<AskUserPayload>(
-        (tui, theme, _keybindings, done) =>
-          new AskUserPanel(panelParams, done, tui, {
-            accent: (text) => theme.fg("accent", text),
-            bold: (text) => theme.bold(text),
-            muted: (text) => theme.fg("muted", text),
-            markdown: {
-              heading: (text) => theme.fg("accent", theme.bold(text)),
-              link: (text) => theme.fg("accent", text),
-              linkUrl: (text) => theme.fg("muted", text),
-              code: (text) => theme.fg("warning", text),
-              codeBlock: (text) => theme.fg("warning", text),
-              codeBlockBorder: (text) => theme.fg("muted", text),
-              quote: (text) => theme.fg("muted", text),
-              quoteBorder: (text) => theme.fg("muted", text),
-              hr: (text) => theme.fg("muted", text),
-              listBullet: (text) => theme.fg("accent", text),
+      try {
+        payload = await ctx.ui.custom<AskUserPayload>(
+          (tui, theme, keybindings, done) => {
+            // custom() mounts after the factory returns; close only after that microtask.
+            onAbort = () => {
+              abortTimer ??= setTimeout(() => done({ cancelled: true, answers: [] }), 0);
+            };
+            const panel = new AskUserPanel(panelParams, done, tui, {
+              accent: (text) => theme.fg("accent", text),
               bold: (text) => theme.bold(text),
-              italic: (text) => theme.fg("accent", text),
-              strikethrough: (text) => theme.fg("muted", text),
-              underline: (text) => theme.fg("accent", text),
-            },
-            borderColor: (text) => theme.fg("accent", text),
-            selectList: {
-              selectedPrefix: (text) => theme.fg("accent", text),
-              selectedText: (text) => theme.fg("accent", text),
-              description: (text) => theme.fg("muted", text),
-              scrollInfo: (text) => theme.fg("dim", text),
-              noMatch: (text) => theme.fg("warning", text),
-            },
-          }),
-        { overlay: false },
-      ).finally(() => ctx.ui.setWorkingVisible(true));
+              muted: (text) => theme.fg("muted", text),
+              markdown: {
+                heading: (text) => theme.fg("accent", theme.bold(text)),
+                link: (text) => theme.fg("accent", text),
+                linkUrl: (text) => theme.fg("muted", text),
+                code: (text) => theme.fg("warning", text),
+                codeBlock: (text) => theme.fg("warning", text),
+                codeBlockBorder: (text) => theme.fg("muted", text),
+                quote: (text) => theme.fg("muted", text),
+                quoteBorder: (text) => theme.fg("muted", text),
+                hr: (text) => theme.fg("muted", text),
+                listBullet: (text) => theme.fg("accent", text),
+                bold: (text) => theme.bold(text),
+                italic: (text) => theme.fg("accent", text),
+                strikethrough: (text) => theme.fg("muted", text),
+                underline: (text) => theme.fg("accent", text),
+              },
+              borderColor: (text) => theme.fg("accent", text),
+              selectList: {
+                selectedPrefix: (text) => theme.fg("accent", text),
+                selectedText: (text) => theme.fg("accent", text),
+                description: (text) => theme.fg("muted", text),
+                scrollInfo: (text) => theme.fg("dim", text),
+                noMatch: (text) => theme.fg("warning", text),
+              },
+            }, keybindings);
+            signal?.addEventListener("abort", onAbort, { once: true });
+            if (signal?.aborted) onAbort();
+            return panel;
+          },
+          { overlay: false },
+        );
+      } finally {
+        if (onAbort) signal?.removeEventListener("abort", onAbort);
+        if (abortTimer !== undefined) clearTimeout(abortTimer);
+        ctx.ui.setWorkingVisible(true);
+      }
       return {
         content: [{ type: "text", text: JSON.stringify(payload) }],
         details: detailsFor(panelParams, payload),

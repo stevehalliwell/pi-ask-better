@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+
+- Bounded, scrollable question panels in regular and fullscreen modes, with automatic focus visibility and current controls in the footer.
+- Support for Pi's configured input-submit and selection navigation, confirmation, cancellation, and page bindings. Ctrl+C also cancels with default bindings.
+
+### Fixed
+
+- Declared the bundled `ask-user` skill in the Pi package manifest so plain package installs discover it.
+- Pending panels now close on tool abort, return cancellation, and clean up abort listeners. Working animation restores after UI errors too.
+
 ### Changed
 
+- Requires Pi 1.3.0+.
+- `ask_user` uses model-only exposure: it stays directly available to the model in codemode-only mode and cannot be called by scripts or nested tools.
 - Paused Pi's working animation while an `ask_user` panel is open, preventing continuous terminal redraws during a long wait.
 - Strengthened always-active `ask_user` guidance: agents use the panel—not a prose question—for focused structured answers needed before continuing, while inspecting context first and proceeding with clear or reversible defaults.
 

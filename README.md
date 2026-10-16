@@ -21,6 +21,8 @@ Install from the [GitHub repository](https://github.com/stevehalliwell/pi-ask-be
 pi install git:github.com/stevehalliwell/pi-ask-better
 ```
 
+Requires Node.js 22.19+ and Pi 1.3.0+.
+
 Restart Pi or run `/reload` after installation. The package includes a model-invoked `ask-user` skill that guides agents to use the panel for focused decisions and clarifications.
 
 When an agent needs your answer before continuing, it uses the panel for a structured clarification, preference, confirmation, recommendation approval, or choice between alternatives. It first checks available context and proceeds without asking when the answer is clear or a reversible default is enough. For unconstrained or substantial text, it asks in Pi chat instead.
@@ -41,11 +43,16 @@ When Pi needs your input, it shows one focused, bordered question panel with a l
 - **Press Up** from the first choice to return to the text box.
 - **Press Enter** on a choice to send it immediately; in single-select questions, it also selects a sole filtered match.
 - For questions that allow several choices, **Space** checks or unchecks a choice, then **Enter** sends your selections.
-- **Press Escape** to cancel.
+- **Press Escape or Ctrl+C** to cancel.
+- **Press PageUp/PageDown** to scroll panel content in regular mode. In fullscreen mode, use **Ctrl+PageUp/Ctrl+PageDown**; PageUp/PageDown still scroll the transcript.
 
 For option-based questions, agents can mark a recommended choice, or several in a multi-select question. Before you type or move, Enter accepts that recommendation; it is shown as ` - recommended`. If no recommendation is supplied, the first choice is the fallback and is shown as ` - default`.
 
 Agents can also ask fixed yes/no questions while retaining custom text entry. For unconstrained text, agents ask directly in Pi chat so you get Pi's native editor.
+
+Panels use at most 60% of terminal height, leaving room for the transcript in regular and fullscreen modes. Navigation keeps the focused choice or answer cursor visible. Scroll to read long questions, descriptions, and previews.
+
+Controls above are defaults. The panel follows Pi's configured input-submit and selection navigation, confirmation, cancellation, and page bindings. The footer shows current controls. Space remains the multi-select toggle.
 
 Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
 
@@ -53,7 +60,7 @@ Question text, option labels and descriptions, and previews support terminal-saf
 
 ## For contributors
 
-Pi Ask Better needs Node.js 22.19+ and Pi 0.83.0+.
+Clone the repository, then use Node.js 22.19+ and Pi 1.3.0+.
 
 ```powershell
 npm run smoke

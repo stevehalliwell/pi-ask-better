@@ -13,8 +13,8 @@ Before committing: keep only verified, durable facts. Pi concatenates context fi
 
 ## Verified commands
 
-- Setup/install: Node.js 22.19+ and Pi 0.83.0+; Pi provides the extension's peer dependencies at runtime.
-- Test: `npm run smoke` (requires a configured Pi model).
+- Setup/install: Node.js 22.19+ and Pi 1.3.0+; Pi provides the extension's peer dependencies at runtime.
+- Test: `npm run smoke` (requires a configured Pi model). Covers package discovery, panel regressions, real regular/fullscreen renderers with an in-memory terminal, non-TUI tool activation, and exact model response.
 - Focused test: `PI_SKIP_VERSION_CHECK=1 pi --no-extensions -e ./index.ts --no-session -p "Reply with exactly: ok"`.
 - Lint/typecheck/build: none configured; Pi loads TypeScript extensions through jiti.
 - Packaging check: `npm pack --dry-run`.

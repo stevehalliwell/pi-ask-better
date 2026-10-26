@@ -54,7 +54,7 @@ Panels use at most 60% of terminal height, leaving room for the transcript in re
 
 Controls above are defaults. The panel follows Pi's configured input-submit and selection navigation, confirmation, cancellation, and page bindings. The footer shows current controls. Space remains the multi-select toggle.
 
-Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them.
+Some choices include more detail. On wide terminals it appears alongside the choices; on narrow terminals it appears underneath them. When examples help you choose, agents provide them before asking or in each option's Markdown preview rather than offering “Show examples first” as a choice.
 
 Question text, option labels and descriptions, and previews support terminal-safe Markdown: headings, emphasis, code, lists, links, blockquotes, and pipe tables. Markdown is display-only: selecting an option returns its original label text.
 

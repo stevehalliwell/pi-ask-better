@@ -94,6 +94,7 @@ Use option labels as the exact returned value. Markdown formatting is display-on
 ## Rules
 
 - Keep the question neutral, concrete, and answerable without hidden context.
+- When examples would help the user choose, provide them before asking or in each option's Markdown `preview`. Do not offer “Show examples first” as a selectable option.
 - Use options or `yesNo: true` for structured choices. Ask unconstrained or substantial text questions directly in Pi chat.
 - Use the tool for one decision, not a survey; never collect secrets or replace an instruction the user already gave.
 - After a result, state the selected value or cancellation outcome before acting on it.

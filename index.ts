@@ -554,6 +554,7 @@ export default function askBetter(pi: ExtensionAPI): void {
       "Ask one focused question with options or yesNo: true. For unconstrained text, ask directly in Pi chat. Do not queue dependent questions. Result JSON: { cancelled, answers: [{ tab, answer|custom|answers }] }.",
     promptSnippet: "Ask one focused structured question when a user decision is needed",
     promptGuidelines: [
+      "When examples would help the user choose, provide them before asking or in each option's Markdown preview. Do not offer to show examples as a selectable option.",
       "Use ask_user for every focused, structured question that needs a user answer before continuing: a clarification, preference, recommendation approval, confirmation, or choice between alternatives. Do not ask such questions in assistant prose or end a response by asking the user to choose, approve, confirm, or clarify; call ask_user instead. First inspect what you can and proceed without asking when the answer is already clear or a reversible default is sufficient. Use options or yesNo: true; ask dependent questions one at a time. Ask unconstrained or substantial text questions directly in Pi chat.",
     ],
     parameters: AskUserSchema,

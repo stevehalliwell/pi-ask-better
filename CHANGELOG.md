@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Agent guidance now calls for helpful examples before asking or in each option's Markdown preview, not as a “Show examples first” choice.
+
 ## [0.4.0]
 
 ### Added
